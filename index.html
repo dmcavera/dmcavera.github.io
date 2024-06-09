@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<script src="wasm_exec.js"></script>
+		<script>
+			const go = new Go();
+			WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
+				go.run(result.instance);
+
+				Init();
+			});
+
+			async function Init() {
+				const params = new URLSearchParams(window.location.search);
+				let startId = params.get('start');
+				let endId = params.get('end');
+
+				const response = await InitGo(startId, endId)
+				if(startId != response.start || endId != response.end ) {
+					startId = response.start;
+					endId = response.end;
+				}
+
+				const start = await GetActor(startId)
+					document.getElementById("startImg").src = start.image;
+					document.getElementById("startLabel").innerHTML = start.name;
+				
+				const end = await GetActor(endId)
+					document.getElementById("endImg").src = end.image;
+					document.getElementById("endLabel").innerHTML = end.name;
+
+				console.log(response);
+			}
+			
+			async function SubmitGuess($this) {
+				try {
+					var guess = $this.previousElementSibling.value;
+					const result = await Guess(guess)
+					console.log(result)
+					const card = ResultCard(result.image, result.name);
+
+					// Insert the new item between the existing items
+					let container = document.getElementById('guesses');
+					var guessContainer = document.getElementById('guessContainer');
+					var index = Array.prototype.indexOf.call(container.children, guessContainer);
+					if (result.isInMovieWithStart) {
+						container.insertBefore(card, container.childNodes[index]);
+					} else if(result.isInMovieWithEnd) {
+						container.appendChild(card);
+					} else {
+						alert(result.name+ " has not been in a movie with either.")
+					}
+
+					if(result.success) {
+						alert("Success\n"+result.movies)
+						container.removeChild(guessContainer)
+					}
+				} catch (err) {
+					console.error('Caught exception', err)
+				}
+			}
+
+			function ResultCard(imageUrl, labelText)  {
+				// Create the container
+				let container = document.createElement('div');
+				container.className = 'image-container';
+
+				// Create the image
+				let image = document.createElement('img');
+				image.id = 'endImg';
+				image.src = imageUrl;
+				image.alt = 'Image';
+
+				// Create the label
+				let label = document.createElement('div');
+				label.id = 'endLabel';
+				label.className = 'label';
+				label.textContent = labelText;
+
+				// Append the image to the container
+				container.appendChild(image);
+
+				// Append the label to the container
+				container.appendChild(label);
+				return container;
+			}
+		</script>
+		<style>
+			.box{
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+			.image-container {
+				text-align: center;
+			}
+
+			.image-container img {
+				width: 200px; /* Adjust as needed */
+				height: auto;
+			}
+
+			.label {
+				margin-top: 10px; /* Adjust as needed */
+			}
+		</style>
+	</head>
+	<body>
+		<p class="image-container">Try to get from one actor to the other by entering actors they have worked with to find their degree of seperation. The lower the better.</p>
+		<div class="image-container">
+			<img  id='startImg' src="your-image-url.jpg" alt="Image">
+			<div id='startLabel' class="label">Loading</div>
+		  </div>
+		
+		<div id='guesses' class="image-container">
+			<div id="guessContainer">
+				<br/>
+				<input id="guess" type="text"></textarea>
+				<button onclick="SubmitGuess(this)">Submit</button>
+				<br/>	
+				<br/>	
+			</div>
+		</div>  
+
+		  <div class="image-container">
+			<img  id='endImg' src="your-image-url.jpg" alt="Image">
+			<div id='endLabel' class="label">Loading</div>
+		  </div>
+	</body>
+</html>
