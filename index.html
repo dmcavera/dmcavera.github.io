@@ -53,8 +53,9 @@
 					}
 
 					if(result.success) {
-						alert("Success\n"+result.movies)
 						container.removeChild(guessContainer)
+						const guesses = container.children.length
+						alert("Success in "+ guesses +" guesses")
 					}
 				} catch (err) {
 					console.error('Caught exception', err)
@@ -85,6 +86,36 @@
 				container.appendChild(label);
 				return container;
 			}
+
+			// Get the popup container
+			const popupContainer = document.getElementById('popup-container');
+			
+			// Show the popup
+			function showPopup() {
+				popupContainer.style.display = 'flex';
+			}
+			
+			// Hide the popup
+			function hidePopup() {
+				popupContainer.style.display = 'none';
+			}
+			
+			// Add an event listener to the share button
+			document.getElementById('share-btn').addEventListener('click', () => {
+				// Your sharing logic goes here
+				// For example, you can use the Web Share API
+				navigator.share({
+				title: 'Your title',
+				text: 'Your text',
+				url: 'https://example.com'
+				})
+				.then(() => {
+					console.log('Shared successfully!');
+				})
+				.catch((error) => {
+					console.error('Error sharing:', error);
+				});
+			});
 		</script>
 		<style>
 			.box{
@@ -104,9 +135,59 @@
 			.label {
 				margin-top: 10px; /* Adjust as needed */
 			}
+
+			p {
+				width: 100%; /* Set the width of the container to the full width of the screen */
+				white-space: normal; /* Allow the text to wrap to the next line when it reaches the edge of the screen */
+				overflow-wrap: break-word; /* Add this to wrap the text at word boundaries */
+			}
+
+			#popup-container {
+				position: fixed;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				left: 0;
+				background-color: rgba(0, 0, 0, 0.5);
+				display: none;
+				justify-content: center;
+				align-items: center;
+				flex-direction: column;
+			}
+			
+			.popup-content {
+				background-color: #fff;
+				padding: 20px;
+				border: 1px solid #ddd;
+				border-radius: 10px;
+				box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+			}
+			
+			#share-btn {
+				background-color: #4CAF50;
+				color: #fff;
+				padding: 10px 20px;
+				border: none;
+				border-radius: 5px;
+				cursor: pointer;
+			}
+			
+			#share-btn:hover {
+				background-color: #3e8e41;
+			}
 		</style>
 	</head>
 	<body>
+		<div id="popup-container" style="display: none;">
+			<!-- The popup content -->
+			<div class="popup-content">
+			  <h2>Success!</h2>
+			  <p>Your action was successful!</p>
+			  <button id="share-btn">Share</button>
+			</div>
+		  </div>
+
+		<h1 class="image-container">Degrees of Seperation</h1>
 		<p class="image-container">Try to get from one actor to the other by entering actors they have worked with to find their degree of seperation. The lower the better.</p>
 		<div class="image-container">
 			<img  id='startImg' src="your-image-url.jpg" alt="Image">
@@ -127,5 +208,10 @@
 			<img  id='endImg' src="your-image-url.jpg" alt="Image">
 			<div id='endLabel' class="label">Loading</div>
 		  </div>
+
+		  <footer class="image-container">
+			<p>Powered by</p>
+			<img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg"/>
+		  </footer>
 	</body>
 </html>
