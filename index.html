@@ -2,6 +2,7 @@
 <html>
 	<head>
 		<meta charset="utf-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1" /> 
 		<script src="wasm_exec.js"></script>
 		<script>
 			const go = new Go();
@@ -13,71 +14,54 @@
 
 			async function Init() {
 				const params = new URLSearchParams(window.location.search);
-				let startId = params.get('start');
-				let endId = params.get('end');
+				let id = params.get('id');
 
-				const response = await InitGo(startId, endId)
-				if(startId != response.start || endId != response.end ) {
-					startId = response.start;
-					endId = response.end;
-				}
+				if(id != null) {
+					const actor = await GetActor(id)
+					const total = await InitYerWan(id)
 
-				const start = await GetActor(startId)
-					document.getElementById("startImg").src = start.image;
-					document.getElementById("startLabel").innerHTML = start.name;
-				
-				const end = await GetActor(endId)
-					document.getElementById("endImg").src = end.image;
-					document.getElementById("endLabel").innerHTML = end.name;
-
-				console.log(response);
+					document.getElementById("actorImg").src = actor.image;
+					document.getElementById("actorName").innerHTML = actor.name;
+				}			
 			}
 			
-			async function SubmitGuess($this) {
+			async function SubmitGuess(guess) {
 				try {
-					var guess = $this.previousElementSibling.value;
-					const result = await Guess(guess)
-					console.log(result)
-					const card = ResultCard(result.image, result.name);
 
-					// Insert the new item between the existing items
+					let titleGuess = document.getElementById('titleGuess');
+					const mediaResult = await Title(titleGuess.value);
+
+					const card = Answer(mediaResult.image, mediaResult.title);
+
 					let container = document.getElementById('guesses');
 					var guessContainer = document.getElementById('guessContainer');
 					var index = Array.prototype.indexOf.call(container.children, guessContainer);
-					if (result.isInMovieWithStart) {
-						container.insertBefore(card, container.childNodes[index]);
-					} else if(result.isInMovieWithEnd) {
-						container.appendChild(card);
-					} else {
-						alert(result.name+ " has not been in a movie with either.")
-					}
 
-					if(result.success) {
-						container.removeChild(guessContainer)
-						const guesses = container.children.length
-						alert("Success in "+ guesses +" guesses")
-					}
+					container.insertBefore(card, container.childNodes[index]);
+
+					titleGuess.value = ""
 				} catch (err) {
 					console.error('Caught exception', err)
 				}
 			}
 
-			function ResultCard(imageUrl, labelText)  {
+			function Answer(imageUrl, characterName) {
 				// Create the container
 				let container = document.createElement('div');
+				container.id = 'answer'
 				container.className = 'image-container';
 
 				// Create the image
 				let image = document.createElement('img');
-				image.id = 'endImg';
+				image.id = 'img';
 				image.src = imageUrl;
 				image.alt = 'Image';
 
 				// Create the label
 				let label = document.createElement('div');
-				label.id = 'endLabel';
+				label.id = 'title';
 				label.className = 'label';
-				label.textContent = labelText;
+				label.textContent = characterName;
 
 				// Append the image to the container
 				container.appendChild(image);
@@ -87,35 +71,27 @@
 				return container;
 			}
 
-			// Get the popup container
-			const popupContainer = document.getElementById('popup-container');
-			
-			// Show the popup
-			function showPopup() {
-				popupContainer.style.display = 'flex';
+			async function Share() {
+				try {
+					let container = document.getElementById('guesses');
+
+					let answers =  document.querySelectorAll('[id="answer"]').length;
+
+					if ('clipboard' in navigator) {
+						const textToCopy = 'I got: ' + answers + ' titles.';
+						navigator.clipboard.writeText(textToCopy).then(() => {
+							alert('Text copied to clipboard!');
+						}, (error) => {
+							console.error('Error copying text to clipboard:', error);
+						});
+					} else {
+						console.log('Clipboard API not supported');
+					}
+				} catch (err) {
+					console.error('Caught exception', err)
+				}
 			}
-			
-			// Hide the popup
-			function hidePopup() {
-				popupContainer.style.display = 'none';
-			}
-			
-			// Add an event listener to the share button
-			document.getElementById('share-btn').addEventListener('click', () => {
-				// Your sharing logic goes here
-				// For example, you can use the Web Share API
-				navigator.share({
-				title: 'Your title',
-				text: 'Your text',
-				url: 'https://example.com'
-				})
-				.then(() => {
-					console.log('Shared successfully!');
-				})
-				.catch((error) => {
-					console.error('Error sharing:', error);
-				});
-			});
+
 		</script>
 		<style>
 			.box{
@@ -178,36 +154,33 @@
 		</style>
 	</head>
 	<body>
-		<div id="popup-container" style="display: none;">
-			<!-- The popup content -->
-			<div class="popup-content">
-			  <h2>Success!</h2>
-			  <p>Your action was successful!</p>
-			  <button id="share-btn">Share</button>
-			</div>
-		  </div>
-
-		<h1 class="image-container">Degrees of Seperation</h1>
-		<p class="image-container">Try to get from one actor to the other by entering actors they have worked with to find their degree of seperation. The lower the better.</p>
+		<h1 class="image-container">Yer wan from...</h1>
+		<p class="image-container">Name a movie or show this actor has been in.</p>
 		<div class="image-container">
-			<img  id='startImg' src="your-image-url.jpg" alt="Image">
-			<div id='startLabel' class="label">Loading</div>
+			<img  id='actorImg' src="your-image-url.jpg" alt="Image">
+			<div id='actorName' class="label">Loading</div>
 		  </div>
 		
 		<div id='guesses' class="image-container">
+			<br/>
+			<br/>
 			<div id="guessContainer">
-				<br/>
-				<input id="guess" type="text"></textarea>
-				<button onclick="SubmitGuess(this)">Submit</button>
-				<br/>	
-				<br/>	
+				<input id="titleGuess" type="text" placeholder="Title" onkeypress="if(event.keyCode==13) {SubmitGuess(titleGuess.value)}"></textarea>
 			</div>
+			<br/>	
+				<br/>	
+			<button onclick="SubmitGuess(titleGuess.value)">Submit</button>
+				<br/>
+				<br/>
 		</div>  
 
-		  <div class="image-container">
-			<img  id='endImg' src="your-image-url.jpg" alt="Image">
-			<div id='endLabel' class="label">Loading</div>
-		  </div>
+		<div id='share' class="image-container">
+			<br/>
+			<br/>
+			<button onclick="Share()">Share</button>
+			<br/>
+			<br/>
+		</div>  
 
 		  <footer class="image-container">
 			<p>Powered by</p>
